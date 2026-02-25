@@ -1,14 +1,14 @@
-# SealDice
+# Scardice
 
 ## 简介
 
-海豹骰工程代码合并仓库，用于实现全平台自动出包。
+余烬骰工程代码合并仓库，用于实现全平台自动出包。
 
 使用 git submodule 机制整合以下四个仓库的代码
-- [sealdice-core](https://github.com/sealdice/sealdice-core)：海豹核心，即海豹的后端工程代码；
-- [sealdice-ui](https://github.com/sealdice/sealdice-ui)：海豹的前端工程代码；
-- [sealdice-android](https://github.com/sealdice/sealdice-android)：海豹的 Android 工程代码；
-- [sealdice-builtins](https://github.com/sealdice/sealdice-builtins)：其他海豹骰子所需的资源文件仓库，包括牌堆、helpdoc 等；
+- [Scardice-core](https://github.com/Scardice/Scardice-core)：余烬核心，即余烬骰的后端工程代码；
+- [Scardice-ui](https://github.com/Scardice/Scardice-ui)：余烬骰的前端工程代码；
+- [sealdice-android](https://github.com/sealdice/sealdice-android)：余烬骰的 Android 工程代码；
+- [sealdice-builtins](https://github.com/sealdice/sealdice-builtins)：其他余烬骰所需的资源文件仓库，包括牌堆、helpdoc 等；
 - [go-cqhttp](https://github.com/sealdice/go-cqhttp)：go-cqhttp 的 fork。
 
 克隆该项目时需要使用 `git clone --recursive` 命令以将子模块代码一并拉取。
@@ -30,4 +30,3 @@
 ## 关于 issue 和 pull request
 
 你可以通过 fork 本项目并提交 pull request 的形式贡献代码
-

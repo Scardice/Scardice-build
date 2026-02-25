@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-LOCAL_BUILD_REPO='/home/ubuntu/project/sealdice-extra/build'
+LOCAL_BUILD_REPO='/home/ubuntu/project/Scardice-extra/build'
 SEALDICE_REMOTE_NAME='origin'
 
 set -ex
@@ -23,7 +23,7 @@ unset PWD_NOW
 
 set +x
 
-repo='sealdice/sealdice-build'
+repo='Scardice/Scardice-build'
 sleep 10s
 
 runID=$(gh -R "$repo" run list -w 'Auto Build' -b 'dev' \
@@ -32,7 +32,7 @@ runID=$(gh -R "$repo" run list -w 'Auto Build' -b 'dev' \
 if [[ -z $runID ]]; then
   echo "No build in progress"
 else
-  gh -R sealdice/sealdice-build run watch "$runID"
+  gh -R Scardice/Scardice-build run watch "$runID"
 fi
 
 unset runID

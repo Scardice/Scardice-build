@@ -12,12 +12,12 @@ ENV SEAL_HOME=
 VOLUME ["/backups", "/data"]
 ARG TARGETARCH
 COPY ./${TARGETARCH}/data ${SEAL_HOME}/buildin-data
-COPY --chmod=0755 ./${TARGETARCH}/sealdice-core  ${SEAL_HOME}/sealdice-core
+COPY --chmod=0755 ./${TARGETARCH}/Scardice-core  ${SEAL_HOME}/Scardice-core
 
 RUN echo "#!/bin/sh" > ${SEAL_HOME}/entrypoint.sh
 RUN echo "mkdir -p ./data/" >> ${SEAL_HOME}/entrypoint.sh
 RUN echo "cp -r /buildin-data/* ./data/" >> ${SEAL_HOME}/entrypoint.sh
-RUN echo "/sealdice-core --container-mode" >> ${SEAL_HOME}/entrypoint.sh
+RUN echo "/Scardice-core --container-mode" >> ${SEAL_HOME}/entrypoint.sh
 RUN chmod +x ${SEAL_HOME}/entrypoint.sh
 
 # 启动

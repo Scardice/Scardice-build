@@ -1,16 +1,16 @@
-[submodule "sealdice-core"]
-	path = sealdice-core
-	url = https://github.com/sealdice/sealdice-core
+[submodule "Scardice-core"]
+	path = Scardice-core
+	url = https://github.com/Scardice/Scardice-core
 	branch = master
-[submodule "sealdice-ui"]
-	path = sealdice-ui
-	url = https://github.com/sealdice/sealdice-ui
+[submodule "Scardice-ui"]
+	path = Scardice-ui
+	url = https://github.com/Scardice/Scardice-ui
 	branch = master
-[submodule "sealdice-android"]
-	path = sealdice-android
+[submodule "Scardice-android"]
+	path = Scardice-android
 	url = https://github.com/sealdice/sealdice-android
 	branch = master
-[submodule "sealdice-builtins"]
-	path = sealdice-builtins
+[submodule "Scardice-builtins"]
+	path = Scardice-builtins
 	url = https://github.com/sealdice/sealdice-builtins
 	branch = master
