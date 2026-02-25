@@ -7,12 +7,23 @@ on:
     branches:
       - dev
   workflow_dispatch:
+    inputs:
+      core_branch:
+        description: "Scardice-core submodule branch"
+        required: false
+        default: "master"
+      ui_branch:
+        description: "Scardice-ui submodule branch"
+        required: false
+        default: "master"
 
 env:
   ANDROID_NDK_VERSION: r25c
   COMMIT_ID: "${{ github.sha }}"
   NO_BUILD_PROMPT: "no new commits, no need to build."
   NT_SIGN_URL: ${{ secrets.NT_SIGN_URL }}
+  CORE_BRANCH: "${{ github.event.inputs.core_branch || 'master' }}"
+  UI_BRANCH: "${{ github.event.inputs.ui_branch || 'master' }}"
 
 jobs:
   commit-num-check:
@@ -22,6 +33,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          submodules: true
+
+      - name: Switch Core/UI submodule branches
+        run: |
+          git submodule update --init --recursive
+          git -C Scardice-core fetch origin "${CORE_BRANCH}"
+          git -C Scardice-core checkout -B "${CORE_BRANCH}" FETCH_HEAD
+          git -C Scardice-ui fetch origin "${UI_BRANCH}"
+          git -C Scardice-ui checkout -B "${UI_BRANCH}" FETCH_HEAD
 
       - name: Get New Commits
         id: get-commits
@@ -54,6 +74,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: true
+      - name: Switch Core/UI submodule branches
+        run: |
+          git submodule update --init --recursive
+          git -C Scardice-core fetch origin "${CORE_BRANCH}"
+          git -C Scardice-core checkout -B "${CORE_BRANCH}" FETCH_HEAD
+          git -C Scardice-ui fetch origin "${UI_BRANCH}"
+          git -C Scardice-ui checkout -B "${UI_BRANCH}" FETCH_HEAD
       - name: Upload Documents
         uses: actions/upload-artifact@v4
         with:
@@ -192,6 +219,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: true
+      - name: Switch Core/UI submodule branches
+        run: |
+          git submodule update --init --recursive
+          git -C Scardice-core fetch origin "${CORE_BRANCH}"
+          git -C Scardice-core checkout -B "${CORE_BRANCH}" FETCH_HEAD
+          git -C Scardice-ui fetch origin "${UI_BRANCH}"
+          git -C Scardice-ui checkout -B "${UI_BRANCH}" FETCH_HEAD
 
       - name: Get Commit ID
         run: |
@@ -263,6 +297,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: true
+      - name: Switch Core/UI submodule branches
+        run: |
+          git submodule update --init --recursive
+          git -C Scardice-core fetch origin "${CORE_BRANCH}"
+          git -C Scardice-core checkout -B "${CORE_BRANCH}" FETCH_HEAD
+          git -C Scardice-ui fetch origin "${UI_BRANCH}"
+          git -C Scardice-ui checkout -B "${UI_BRANCH}" FETCH_HEAD
       - name: Install Cross-compiler for Windows
         if: matrix.goos == 'windows'
         run: sudo apt-get -y install mingw-w64
@@ -388,6 +429,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: true
+      - name: Switch Core/UI submodule branches
+        run: |
+          git submodule update --init --recursive
+          git -C Scardice-core fetch origin "${CORE_BRANCH}"
+          git -C Scardice-core checkout -B "${CORE_BRANCH}" FETCH_HEAD
+          git -C Scardice-ui fetch origin "${UI_BRANCH}"
+          git -C Scardice-ui checkout -B "${UI_BRANCH}" FETCH_HEAD
       - name: Install Go
         uses: actions/setup-go@v5
         with:
@@ -446,6 +494,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: true
+      - name: Switch Core/UI submodule branches
+        run: |
+          git submodule update --init --recursive
+          git -C Scardice-core fetch origin "${CORE_BRANCH}"
+          git -C Scardice-core checkout -B "${CORE_BRANCH}" FETCH_HEAD
+          git -C Scardice-ui fetch origin "${UI_BRANCH}"
+          git -C Scardice-ui checkout -B "${UI_BRANCH}" FETCH_HEAD
       - name: Setup Android NDK
         id: setup-ndk
         uses: nttld/setup-ndk@v1
