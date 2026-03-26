@@ -110,6 +110,26 @@ jobs:
           name: lagrange
           path: ./lag
 
+  milky-download:
+    name: Download Milky
+    runs-on: ubuntu-latest
+    needs: commit-num-check
+    if: ${{ needs.commit-num-check.outputs.commit-count > 0 }}
+    steps:
+      - name: Download
+        run: |
+          mkdir milky
+          wget https://github.com/sealdice/LagrangeV2/releases/download/nightly/Lagrange.Milky-linux-arm64 -O milky/milky.linux-arm64
+          wget https://github.com/sealdice/LagrangeV2/releases/download/nightly/Lagrange.Milky-linux-x64 -O milky/milky.linux-amd64
+          wget https://github.com/sealdice/LagrangeV2/releases/download/nightly/Lagrange.Milky-osx-arm64 -O milky/milky.darwin-arm64
+          wget https://github.com/sealdice/LagrangeV2/releases/download/nightly/Lagrange.Milky-win-x64.exe -O milky/milky.windows-amd64.exe
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: milky
+          path: ./milky
+
   lagrange-gocq-download:
     name: Download Lagrange-Gocq
     runs-on: ubuntu-latest
@@ -139,18 +159,22 @@ jobs:
     needs: lagrange-download
     strategy:
       matrix:
-        # target: linux/amd64, linux/arm64, windows/amd64, darwin/amd64, darwin/arm64
-        goos: [ linux, windows, darwin ]
-        goarch: [ '386', amd64, arm64 ]
+        # target: linux/amd64, linux/arm64, windows/amd64, darwin/amd64, darwin/arm64, android/arm64
+        goos: [linux, windows, darwin, android]
+        goarch: ["386", amd64, arm64]
         exclude:
           - goos: linux
-            goarch: '386'
+            goarch: "386"
           - goos: windows
             goarch: arm64
           - goos: windows
-            goarch: '386'
+            goarch: "386"
           - goos: darwin
-            goarch: '386'
+            goarch: "386"
+          - goos: android
+            goarch: amd64
+          - goos: android
+            goarch: "386"
     steps:
       - name: Get Lagrange
         uses: actions/download-artifact@v4
@@ -171,24 +195,72 @@ jobs:
           name: lagrange.${{ matrix.goos }}-${{ matrix.goarch }}
           path: ./extract/Lagrange.OneBot.${{ matrix.goos }}-${{ matrix.goarch }}
 
+  milky-setup:
+    name: Download Milky
+    runs-on: ubuntu-latest
+    needs: milky-download
+    strategy:
+      matrix:
+        goos: [linux, windows, darwin]
+        goarch: ["386", amd64, arm64]
+        exclude:
+          - goos: linux
+            goarch: "386"
+          - goos: windows
+            goarch: arm64
+          - goos: windows
+            goarch: "386"
+          - goos: darwin
+            goarch: "386"
+          - goos: darwin
+            goarch: "amd64"
+    steps:
+      - name: Get Milky
+        uses: actions/download-artifact@v4
+        with:
+          name: milky
+          path: ./milky
+
+      - name: Move and Rename
+        if: matrix.goos != 'windows'
+        run: |
+          mkdir -p ./milkytmp/milky.${{ matrix.goos }}-${{ matrix.goarch }}
+          mv ./milky/milky.${{ matrix.goos }}-${{ matrix.goarch }} ./milkytmp/milky.${{ matrix.goos }}-${{ matrix.goarch }}/milky
+
+      - name: Move and Rename exe
+        if: matrix.goos == 'windows'
+        run: |
+          mkdir -p ./milkytmp/milky.${{ matrix.goos }}-${{ matrix.goarch }}
+          mv ./milky/milky.${{ matrix.goos }}-${{ matrix.goarch }}.exe ./milkytmp/milky.${{ matrix.goos }}-${{ matrix.goarch }}/milky.exe
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: milky.${{ matrix.goos }}-${{ matrix.goarch }}
+          path: ./milkytmp/milky.${{ matrix.goos }}-${{ matrix.goarch }}
+
   lagrange-gocq-setup:
     name: Download Lagrange-Gocq
     runs-on: ubuntu-latest
     needs: lagrange-gocq-download
     strategy:
       matrix:
-        # target: linux/amd64, linux/arm64, windows/amd64, darwin/amd64, darwin/arm64
-        goos: [ linux, windows, darwin ]
-        goarch: [ '386', amd64, arm64 ]
+        # target: linux/amd64, linux/arm64, windows/amd64, darwin/amd64, darwin/arm64, android/arm64
+        goos: [linux, windows, darwin, android]
+        goarch: ["386", amd64, arm64]
         exclude:
           - goos: linux
-            goarch: '386'
+            goarch: "386"
           - goos: windows
             goarch: arm64
           - goos: windows
-            goarch: '386'
+            goarch: "386"
           - goos: darwin
-            goarch: '386'
+            goarch: "386"
+          - goos: android
+            goarch: amd64
+          - goos: android
+            goarch: "386"
     steps:
       - name: Get Lagrange-Gocq
         uses: actions/download-artifact@v4
@@ -280,15 +352,15 @@ jobs:
     strategy:
       matrix:
         # target: linux/amd64, linux/arm64, windows/amd64
-        goos: [ linux, windows ]
-        goarch: [ '386', amd64, arm64 ]
+        goos: [linux, windows]
+        goarch: ["386", amd64, arm64]
         exclude:
           - goos: linux
-            goarch: '386'
+            goarch: "386"
           - goos: windows
             goarch: arm64
           - goos: windows
-            goarch: '386'
+            goarch: "386"
       fail-fast: true
     steps:
       - name: Apt-get Update
@@ -318,7 +390,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version: "1.25.7"
           cache-dependency-path: Scardice-core/go.sum
 
       # copy from https://github.com/MetaCubeX/mihomo/blob/dbb002a5ba2e0e79158fd6e3264ac44aedf0bf72/.github/workflows/build.yml#L157-L173
@@ -388,8 +460,10 @@ jobs:
           CGO_FLAGS: -Werror=unused-variable -Werror=implicit-function-declaration -O2 -H=windowsgui
           CUR_TIME: ${{ steps.currentTime.outputs.time }}
           SEAL_TRUSTED_PRIVATE_KEY: ${{ secrets.SEAL_TRUSTED_PRIVATE_KEY }}
+          SEAL_SIGN_PRIVATE_KEY: ${{ secrets.SEAL_SIGN_PRIVATE_KEY }}
+          SEAL_SIGN_V3_URL: ${{ secrets.SEAL_SIGN_V3_URL }}
         working-directory: ./Scardice-core
-        run: go build -o "output/$BINARY_NAME" -trimpath -ldflags "-s -w -X sealdice-core/dice.VERSION_PRERELEASE=-dev -X sealdice-core/dice.VERSION_BUILD_METADATA=+${CUR_TIME}.${COMMIT_ID::7} -X sealdice-core/dice.APP_CHANNEL=dev -X sealdice-core/dice.APPNAME=Scardice -X 'sealdice-core/dice.DefaultSignUrl=${NT_SIGN_URL}' -X 'sealdice-core/dice.SealTrustedClientPrivateKey=${SEAL_TRUSTED_PRIVATE_KEY}'" .
+        run: go build -o "output/$BINARY_NAME" -trimpath -ldflags "-s -w -X sealdice-core/dice.VERSION_PRERELEASE=-dev -X sealdice-core/dice.VERSION_BUILD_METADATA=+${CUR_TIME}.${COMMIT_ID::7} -X sealdice-core/dice.APP_CHANNEL=dev -X sealdice-core/dice.APPNAME=Scardice -X 'sealdice-core/dice.DefaultSignUrl=${NT_SIGN_URL}' -X 'Scardice-core/dice.SealTrustedClientPrivateKey=${SEAL_TRUSTED_PRIVATE_KEY}' -X 'Scardice-core/dice.SealSignClientPrivateKey=${SEAL_SIGN_PRIVATE_KEY}' -X 'Scardice-core/dice.SealSignV3Url=${SEAL_SIGN_V3_URL}'" .
       - name: Build Binary (linux musl)
         if: matrix.goos == 'linux'
         env:
@@ -400,8 +474,10 @@ jobs:
           CGO_FLAGS: -Werror=unused-variable -Werror=implicit-function-declaration -O2 -H=windowsgui
           CUR_TIME: ${{ steps.currentTime.outputs.time }}
           SEAL_TRUSTED_PRIVATE_KEY: ${{ secrets.SEAL_TRUSTED_PRIVATE_KEY }}
+          SEAL_SIGN_PRIVATE_KEY: ${{ secrets.SEAL_SIGN_PRIVATE_KEY }}
+          SEAL_SIGN_V3_URL: ${{ secrets.SEAL_SIGN_V3_URL }}
         working-directory: ./Scardice-core
-        run: go build -tags musl -o "output/$BINARY_NAME" -trimpath -ldflags "-s -w -linkmode external -extldflags '-static' -X sealdice-core/dice.VERSION_PRERELEASE=-dev -X sealdice-core/dice.VERSION_BUILD_METADATA=+${CUR_TIME}.${COMMIT_ID::7} -X sealdice-core/dice.APP_CHANNEL=dev -X sealdice-core/dice.APPNAME=Scardice -X 'sealdice-core/dice.DefaultSignUrl=${NT_SIGN_URL}' -X 'sealdice-core/dice.SealTrustedClientPrivateKey=${SEAL_TRUSTED_PRIVATE_KEY}'" .
+        run: go build -tags musl -o "output/$BINARY_NAME" -trimpath -ldflags "-s -w -linkmode external -extldflags '-static' -X sealdice-core/dice.VERSION_PRERELEASE=-dev -X sealdice-core/dice.VERSION_BUILD_METADATA=+${CUR_TIME}.${COMMIT_ID::7} -X sealdice-core/dice.APP_CHANNEL=dev -X sealdice-core/dice.APPNAME=Scardice -X 'sealdice-core/dice.DefaultSignUrl=${NT_SIGN_URL}' -X 'Scardice-core/dice.SealTrustedClientPrivateKey=${SEAL_TRUSTED_PRIVATE_KEY}' -X 'Scardice-core/dice.SealSignClientPrivateKey=${SEAL_SIGN_PRIVATE_KEY}' -X 'Scardice-core/dice.SealSignV3Url=${SEAL_SIGN_V3_URL}'" .
       - name: Run UPX
         uses: crazy-max/ghaction-upx@v3
         with:
@@ -421,8 +497,8 @@ jobs:
     strategy:
       matrix:
         # target: darwin/amd64 darwin/arm64
-        goos: [ darwin ]
-        goarch: [ amd64, arm64 ]
+        goos: [darwin]
+        goarch: [amd64, arm64]
       fail-fast: true
     steps:
       - name: Code
@@ -439,7 +515,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version: "1.25.7"
           cache-dependency-path: Scardice-core/go.sum
       - name: Install dependencies
         working-directory: ./Scardice-core
@@ -476,8 +552,10 @@ jobs:
           CGO_CFLAGS: -mmacosx-version-min=10.12
           CUR_TIME: ${{ steps.currentTime.outputs.time }}
           SEAL_TRUSTED_PRIVATE_KEY: ${{ secrets.SEAL_TRUSTED_PRIVATE_KEY }}
+          SEAL_SIGN_PRIVATE_KEY: ${{ secrets.SEAL_SIGN_PRIVATE_KEY }}
+          SEAL_SIGN_V3_URL: ${{ secrets.SEAL_SIGN_V3_URL }}
         working-directory: ./Scardice-core
-        run: go build -o "output/Scardice-core" -trimpath -ldflags "-s -w -X sealdice-core/dice.VERSION_PRERELEASE=-dev -X sealdice-core/dice.VERSION_BUILD_METADATA=+${CUR_TIME}.${COMMIT_ID::7} -X sealdice-core/dice.APP_CHANNEL=dev -X sealdice-core/dice.APPNAME=Scardice -X 'sealdice-core/dice.DefaultSignUrl=${NT_SIGN_URL}' -X 'sealdice-core/dice.SealTrustedClientPrivateKey=${SEAL_TRUSTED_PRIVATE_KEY}'" .
+        run: go build -o "output/Scardice-core" -trimpath -ldflags "-s -w -X sealdice-core/dice.VERSION_PRERELEASE=-dev -X sealdice-core/dice.VERSION_BUILD_METADATA=+${CUR_TIME}.${COMMIT_ID::7} -X sealdice-core/dice.APP_CHANNEL=dev -X sealdice-core/dice.APPNAME=Scardice -X 'sealdice-core/dice.DefaultSignUrl=${NT_SIGN_URL}' -X 'Scardice-core/dice.SealTrustedClientPrivateKey=${SEAL_TRUSTED_PRIVATE_KEY}' -X 'Scardice-core/dice.SealSignClientPrivateKey=${SEAL_SIGN_PRIVATE_KEY}' -X 'Scardice-core/dice.SealSignV3Url=${SEAL_SIGN_V3_URL}'" .
       - name: Upload Core
         uses: actions/upload-artifact@v4
         with:
@@ -487,7 +565,6 @@ jobs:
   core-android-build:
     name: Build Core (android, arm64)
     runs-on: ubuntu-latest
-    if: false
     needs: ui-build
     steps:
       - name: Code
@@ -511,7 +588,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version: "1.25.7"
           cache-dependency-path: Scardice-core/go.sum
       - name: Install dependencies
         working-directory: ./Scardice-core
@@ -547,9 +624,11 @@ jobs:
           CGO_FLAGS: -Werror=unused-variable -Werror=implicit-function-declaration -O2
           CUR_TIME: ${{ steps.currentTime.outputs.time }}
           SEAL_TRUSTED_PRIVATE_KEY: ${{ secrets.SEAL_TRUSTED_PRIVATE_KEY }}
+          SEAL_SIGN_PRIVATE_KEY: ${{ secrets.SEAL_SIGN_PRIVATE_KEY }}
+          SEAL_SIGN_V3_URL: ${{ secrets.SEAL_SIGN_V3_URL }}
         working-directory: ./Scardice-core
         run: |
-          go build -o "output/Scardice-core" -trimpath -ldflags "-s -w -X sealdice-core/dice.VERSION_PRERELEASE=-dev -X sealdice-core/dice.VERSION_BUILD_METADATA=+${CUR_TIME}.${COMMIT_ID::7} -X sealdice-core/dice.APP_CHANNEL=dev -X sealdice-core/dice.APPNAME=Scardice -X 'sealdice-core/dice.DefaultSignUrl=${NT_SIGN_URL}' -X 'sealdice-core/dice.SealTrustedClientPrivateKey=${SEAL_TRUSTED_PRIVATE_KEY}'" .
+          go build -o "output/Scardice-core" -trimpath -ldflags "-s -w -X sealdice-core/dice.VERSION_PRERELEASE=-dev -X sealdice-core/dice.VERSION_BUILD_METADATA=+${CUR_TIME}.${COMMIT_ID::7} -X sealdice-core/dice.APP_CHANNEL=dev -X sealdice-core/dice.APPNAME=Scardice -X 'sealdice-core/dice.DefaultSignUrl=${NT_SIGN_URL}' -X 'Scardice-core/dice.SealTrustedClientPrivateKey=${SEAL_TRUSTED_PRIVATE_KEY}' -X 'Scardice-core/dice.SealSignClientPrivateKey=${SEAL_SIGN_PRIVATE_KEY}' -X 'Scardice-core/dice.SealSignV3Url=${SEAL_SIGN_V3_URL}'" .
       - name: Upload Core
         uses: actions/upload-artifact@v4
         with:
@@ -559,11 +638,11 @@ jobs:
   android-build:
     name: Build Android Apk
     runs-on: ubuntu-latest
-    if: false
     needs:
       - core-android-build
       - resources-download
       - lagrange-setup
+      - milky-setup
     env:
       ANDROID_VERSION: ${{needs.commit-num-check.outputs.ANDROID_VERSION}}
     steps:
@@ -604,6 +683,12 @@ jobs:
           name: lagrange.android-arm64
           path: ./Scardice-android/app/src/main/assets/sealdice/lagrange/
 
+      - name: Get Milky
+        uses: actions/download-artifact@v4
+        with:
+          name: milky.linux-arm64
+          path: ./Scardice-android/app/src/main/assets/sealdice/milky/
+
       - name: Get Gocq-lagr
         uses: actions/download-artifact@v4
         with:
@@ -613,9 +698,9 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
-          cache: 'gradle'
+          distribution: "temurin"
+          java-version: "17"
+          cache: "gradle"
       - name: Set Execution Flag
         working-directory: ./Scardice-android
         run: chmod +x gradlew
@@ -669,20 +754,21 @@ jobs:
       - core-build
       - core-darwin-build
       - lagrange-setup
+      - milky-setup
     strategy:
       matrix:
         # target: linux/amd64, linux/arm64, windows/amd64, darwin/amd64, darwin/arm64
-        goos: [ linux, windows, darwin ]
-        goarch: [ '386', amd64, arm64 ]
+        goos: [linux, windows, darwin]
+        goarch: ["386", amd64, arm64]
         exclude:
           - goos: linux
-            goarch: '386'
+            goarch: "386"
           - goos: windows
             goarch: arm64
           - goos: windows
-            goarch: '386'
+            goarch: "386"
           - goos: darwin
-            goarch: '386'
+            goarch: "386"
     steps:
       - name: Get current time
         uses: Kaven-Universe/github-action-current-date-time@v1
@@ -713,6 +799,13 @@ jobs:
           name: lagrange-gocq.${{ matrix.goos }}-${{ matrix.goarch }}
           path: ./lagrange/
 
+      - name: Get Milky
+        if: matrix.goos != 'darwin' || matrix.goarch != 'amd64'
+        uses: actions/download-artifact@v4
+        with:
+          name: milky.${{ matrix.goos }}-${{ matrix.goarch }}
+          path: ./milky/
+
       - name: Get Core
         uses: actions/download-artifact@v4
         with:
@@ -734,21 +827,25 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - pc-pack
+      - android-build
       - commit-num-check
     strategy:
       matrix:
         # target: linux/amd64, linux/arm64, windows/amd64, darwin/amd64, darwin/arm64, android/arm64
-        goos: [ linux, windows, darwin ]
-        goarch: [ '386', amd64, arm64 ]
+        goos: [linux, windows, darwin]
+        goarch: ["386", amd64, arm64]
         exclude:
           - goos: linux
-            goarch: '386'
+            goarch: "386"
           - goos: windows
             goarch: arm64
           - goos: windows
-            goarch: '386'
+            goarch: "386"
           - goos: darwin
-            goarch: '386'
+            goarch: "386"
+        include:
+          - goos: android
+            goarch: arm64
     env:
       ANDROID_VERSION: ${{needs.commit-num-check.outputs.ANDROID_VERSION}}
     steps:
@@ -837,10 +934,10 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           tag: pre-release
-          name: 'Latest Dev Build ${{ steps.currentTime.outputs.time }}'
+          name: "Latest Dev Build ${{ steps.currentTime.outputs.time }}"
           prerelease: true
-          body: '> ⚠️注意️️：这是自动构建的预发布版本，非正式版本！'
-          artifacts: | 
+          body: "> ⚠️注意️️：这是自动构建的预发布版本，非正式版本！"
+          artifacts: |
             dist/Scardice*
           allowUpdates: true
           removeArtifacts: true
@@ -892,8 +989,7 @@ jobs:
           path: ./arm64/
 
       - name: Chmod
-        run:
-          chmod +x ./amd64/Scardice-core && chmod +x ./arm64/Scardice-core
+        run: chmod +x ./amd64/Scardice-core && chmod +x ./arm64/Scardice-core
 
       - name: Docker Login
         uses: docker/login-action@v2
@@ -958,8 +1054,7 @@ jobs:
           path: ./arm64/
 
       - name: Chmod
-        run:
-          chmod +x ./amd64/Scardice-core && chmod +x ./arm64/Scardice-core
+        run: chmod +x ./amd64/Scardice-core && chmod +x ./arm64/Scardice-core
 
       - name: Docker Login
         uses: docker/login-action@v2
@@ -995,6 +1090,8 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - prerelease
+      - docker-push
+      - docker-push-full
     permissions:
       actions: write
     steps:
@@ -1005,6 +1102,7 @@ jobs:
             documents
             go-cqhttp*
             lagrange*
+            milky*
             Scardice-ui
             Scardice-core*
             Scardice-prerelease*
