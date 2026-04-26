@@ -1,0 +1,73 @@
+name: Manual Update External Resources
+
+on:
+  workflow_dispatch:
+    inputs:
+      core_branch:
+        description: "Scardice-core submodule branch"
+        required: false
+        default: "master"
+      ui_branch:
+        description: "Scardice-ui submodule branch"
+        required: false
+        default: "master"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-external-resources
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    env:
+      CORE_BRANCH: "${{ github.event.inputs.core_branch || 'master' }}"
+      UI_BRANCH: "${{ github.event.inputs.ui_branch || 'master' }}"
+    steps:
+      - name: Checkout repository (with submodules)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Set git user
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Update core/ui to selected branches
+        run: |
+          git submodule update --init --recursive
+          git -C Scardice-core fetch origin "${CORE_BRANCH}"
+          git -C Scardice-core checkout -B "${CORE_BRANCH}" FETCH_HEAD
+          git -C Scardice-ui fetch origin "${UI_BRANCH}"
+          git -C Scardice-ui checkout -B "${UI_BRANCH}" FETCH_HEAD
+
+      - name: Update other submodules to remote default branch
+        run: |
+          git submodule foreach --recursive 'if [ "$name" = "Scardice-core" ] || [ "$name" = "Scardice-ui" ]; then exit 0; fi; default_branch=$(git remote show origin | awk "/HEAD branch/ {print \$NF}" || echo master); git fetch origin --prune || true; git reset --hard origin/${default_branch} || true'
+
+      - name: Commit and push changes
+        env:
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          echo "Repository status (porcelain):"
+          git status --porcelain
+
+          if [ -n "$(git status --porcelain)" ]; then
+            git add -A
+            if git diff --staged --quiet; then
+              echo "No staged changes to commit"
+              exit 0
+            fi
+
+            git commit -m "chore: update external resources"
+            git remote set-url origin https://x-access-token:${PAT_TOKEN}@github.com/${{ github.repository }}.git
+            BRANCH=$(git rev-parse --abbrev-ref HEAD)
+            git push origin HEAD:${BRANCH}
+          else
+            echo "No changes detected, nothing to commit"
+          fi
