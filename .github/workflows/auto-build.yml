@@ -484,6 +484,10 @@ jobs:
           version: latest
           files: ./Scardice-core/output/${{ env.BINARY_NAME }}
           args: -9 -fq
+      - name: Add Linux compatibility binary name
+        if: matrix.goos == 'linux'
+        working-directory: ./Scardice-core
+        run: cp "output/${BINARY_NAME}" output/sealdice-core
       - name: Upload Core
         uses: actions/upload-artifact@v4
         with:
