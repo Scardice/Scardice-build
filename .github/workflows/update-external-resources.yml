@@ -27,10 +27,11 @@ jobs:
       UI_BRANCH: "${{ github.event.inputs.ui_branch || 'master' }}"
     steps:
       - name: Checkout repository (with submodules)
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
+          token: ${{ secrets.PAT_TOKEN }}
 
       - name: Set git user
         run: |
@@ -51,7 +52,7 @@ jobs:
 
       - name: Commit and push changes
         env:
-          AUTH_TOKEN: ${{ secrets.PAT_TOKEN || github.token }}
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
           echo "Repository status (porcelain):"
           git status --porcelain
@@ -64,7 +65,7 @@ jobs:
             fi
 
             git commit -m "chore: update external resources"
-            git remote set-url origin https://x-access-token:${AUTH_TOKEN}@github.com/${{ github.repository }}.git
+            git remote set-url origin https://x-access-token:${PAT_TOKEN}@github.com/${{ github.repository }}.git
             BRANCH=$(git rev-parse --abbrev-ref HEAD)
             git push origin HEAD:${BRANCH}
           else
