@@ -15,17 +15,32 @@
 
 ## 细节
 
-### 自动构建
+### 手动构建
 
-工作流为 [auto-build.yml](.github/workflows/auto-build.yml)，相关 jobs 功能：
-- `commit-num-check`：用于检查 24 小时内是否有新 commit，没有则每天自动触发的构建不打包；
-- `resources-download`：下载资源文件，牌堆、helpdoc、gocghttp 等；
-- `gocqhttp-build`,`gocqhttp-android-build`：自动编译所需平台的 gocqhttp，android 端需要使用 NDK；
-- `ui-build`：ui自动构建；
-- `core-build`,`core-darwin-build`,`core-android-build`：core 的自动构建，分别为 windows&linux macos 和 android；
-- `pc-pack`：windows & linux & macos 三端的打包，会组装 helpdoc、gocqhttp 等资源文件；
-- `android-build`：android apk 的打包，目前只打包 debug 版本，也会组装资源文件；
-- `clear-temp-artifact`：清理产物，保证 artifacts 整洁。
+工作流为 [auto-build.yml](.github/workflows/auto-build.yml)，只支持手动触发：
+
+1. 打开 GitHub Actions，选择 `Manual Build`；
+2. 点击 `Run workflow`，配置 core/UI 分支、版本信息、单目标或多目标、CGO、兼容命名、UPX 和运行时资源选项；
+3. 构建完成后，从 `Scardice-build-*` Artifact 下载 `output/` 中的压缩包。
+
+该工作流直接调用 `Scardice-core/build.sh`，由脚本负责构建 UI、编译 core、下载运行时资源并打包。默认目标为：
+
+```text
+linux/amd64,windows/amd64,darwin/arm64
+```
+
+如果配置了以下 Repository secrets，工作流会临时写入脚本约定的签名文件：
+
+- `SCARDICE_TRUSTED_CLIENT_PRIVATE_KEY`
+- `SCARDICE_SIGN_CLIENT_PRIVATE_KEY`
+- `SCARDICE_SIGN_V3_URL`
+- `BUILD_PROXY`（可选下载代理）
+
+### Nightly 自动构建
+
+[Update submodules daily](.github/workflows/update-submodules.yml) 每天 03:00 UTC 检查并跟进各个子模块的上游分支。只有检测到子模块指针实际变化时，才会触发 [Nightly Build](.github/workflows/nightly-build.yml)。
+
+Nightly 使用与手动构建相同的 `Scardice-core/build.sh` 流程，默认构建 `linux/amd64`、`windows/amd64` 和 `darwin/arm64`，并把产物更新到唯一的 `Nightly` 预发布版本中；旧的 Nightly 附件会被删除后重新上传。
 
 ## 关于 issue 和 pull request
 
