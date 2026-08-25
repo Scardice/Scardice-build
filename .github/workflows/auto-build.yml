@@ -44,7 +44,7 @@ on:
       targets:
         description: "single: one GOOS/GOARCH; multi: comma-separated GOOS/GOARCH list"
         required: true
-        default: "linux/amd64,windows/amd64,darwin/arm64"
+        default: "linux/amd64,windows/amd64"
         type: string
       enable_cgo:
         description: "Enable CGO; cross-compilers are installed for supported targets"

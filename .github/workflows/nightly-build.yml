@@ -76,8 +76,8 @@ jobs:
           echo "should_build=true" >> "$GITHUB_OUTPUT"
           echo "checkout_ref=$latest_sha" >> "$GITHUB_OUTPUT"
 
-  build:
-    name: Build and publish Nightly
+  build-ubuntu:
+    name: Build Linux and Windows packages
     needs: check
     if: needs.check.outputs.should_build == 'true'
     runs-on: ubuntu-latest
@@ -134,7 +134,7 @@ jobs:
             printf '%s' "$SIGN_V3_URL" > Scardice-core/signature/SealSignV3Url
           fi
 
-      - name: Run the default nightly build
+      - name: Run the Linux/Windows build
         working-directory: Scardice-core
         shell: bash
         run: |
@@ -152,7 +152,7 @@ jobs:
             "dev"
             "Scardice"
             "multi"
-            "linux/amd64,windows/amd64,darwin/arm64"
+            "linux/amd64,windows/amd64"
             "n"
             "n"
           )
@@ -160,22 +160,151 @@ jobs:
             input_lines+=(n)
           fi
 
-          printf '%s\n' "${input_lines[@]}" | bash ./build.sh 2>&1 | tee "$GITHUB_WORKSPACE/nightly-build.log"
+          printf '%s\n' "${input_lines[@]}" | bash ./build.sh 2>&1 | tee "$GITHUB_WORKSPACE/nightly-ubuntu.log"
 
-      - name: Verify generated packages
-        shell: bash
-        run: |
-          set -euo pipefail
-          find Scardice-core/output -maxdepth 1 -type f -print -exec ls -lh {} \; | sort
+      - name: Upload Linux/Windows packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-ubuntu-output
+          path: Scardice-core/output/*
+          if-no-files-found: error
+          retention-days: 7
 
-      - name: Upload build log artifact
+      - name: Upload Linux/Windows build log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: nightly-build-log-${{ github.run_number }}
-          path: nightly-build.log
+          name: nightly-ubuntu-log
+          path: nightly-ubuntu.log
           if-no-files-found: warn
           retention-days: 7
+
+  build-darwin:
+    name: Build macOS arm64 package
+    needs: check
+    if: needs.check.outputs.should_build == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout selected source with submodules
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.check.outputs.checkout_ref }}
+          submodules: recursive
+          persist-credentials: true
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: Scardice-core/go.mod
+          cache: false
+
+      - name: Set up Node and pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: Scardice-core/Scardice-ui/pnpm-lock.yaml
+
+      - name: Prepare optional signing files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -n "${TRUSTED_CLIENT_PRIVATE_KEY:-}" ]]; then
+            mkdir -p Scardice-core/signature
+            printf '%s' "$TRUSTED_CLIENT_PRIVATE_KEY" > Scardice-core/signature/seal_trusted_private_key.pem
+          fi
+          if [[ -n "${SIGN_CLIENT_PRIVATE_KEY:-}" ]]; then
+            mkdir -p Scardice-core/signature
+            printf '%s' "$SIGN_CLIENT_PRIVATE_KEY" > Scardice-core/signature/seal_sign_private_key.bin
+          fi
+          if [[ -n "${SIGN_V3_URL:-}" ]]; then
+            mkdir -p Scardice-core/signature
+            printf '%s' "$SIGN_V3_URL" > Scardice-core/signature/SealSignV3Url
+          fi
+
+      - name: Run the macOS build
+        working-directory: Scardice-core
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          export PACK_RUNTIME_ASSETS=1
+          export RUNTIME_ASSETS_STRICT=1
+          export RUNTIME_CACHE_TTL_SECONDS=86400
+          export DOWNLOAD_RETRIES=3
+          export RUNTIME_AXEL_CONNECTIONS=4
+
+          input_lines=(
+            ""
+            "-dev"
+            "dev"
+            "Scardice"
+            "single"
+            "3"
+            "2"
+            "y"
+            "n"
+          )
+          if command -v upx >/dev/null 2>&1; then
+            input_lines+=(n)
+          fi
+
+          printf '%s\n' "${input_lines[@]}" | bash ./build.sh 2>&1 | tee "$GITHUB_WORKSPACE/nightly-darwin.log"
+
+      - name: Upload macOS package
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-darwin-output
+          path: Scardice-core/output/*
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload macOS build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-darwin-log
+          path: nightly-darwin.log
+          if-no-files-found: warn
+          retention-days: 7
+
+  release:
+    name: Replace Nightly Release
+    needs:
+      - check
+      - build-ubuntu
+      - build-darwin
+    if: >-
+      needs.check.outputs.should_build == 'true' &&
+      needs.build-ubuntu.result == 'success' &&
+      needs.build-darwin.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Linux/Windows packages
+        uses: actions/download-artifact@v4
+        with:
+          name: nightly-ubuntu-output
+          path: release-artifacts
+
+      - name: Download macOS package
+        uses: actions/download-artifact@v4
+        with:
+          name: nightly-darwin-output
+          path: release-artifacts
+
+      - name: List release files
+        shell: bash
+        run: |
+          set -euo pipefail
+          find release-artifacts -maxdepth 1 -type f -print -exec ls -lh {} \; | sort
 
       - name: Replace the single Nightly Release
         uses: ncipollo/release-action@v1
@@ -195,4 +324,4 @@ jobs:
           removeArtifacts: true
           replacesArtifacts: true
           artifactErrorsFailBuild: true
-          artifacts: Scardice-core/output/*
+          artifacts: release-artifacts/*

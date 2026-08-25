@@ -26,7 +26,7 @@
 该工作流直接调用 `Scardice-core/build.sh`，由脚本负责构建 UI、编译 core、下载运行时资源并打包。默认目标为：
 
 ```text
-linux/amd64,windows/amd64,darwin/arm64
+linux/amd64,windows/amd64
 ```
 
 如果配置了以下 Repository secrets，工作流会临时写入脚本约定的签名文件：
@@ -40,7 +40,7 @@ linux/amd64,windows/amd64,darwin/arm64
 
 [Update submodules daily](.github/workflows/update-submodules.yml) 每天 03:00 UTC 检查并跟进各个子模块的上游分支。只有检测到子模块指针实际变化时，才会触发 [Nightly Build](.github/workflows/nightly-build.yml)。
 
-Nightly 使用与手动构建相同的 `Scardice-core/build.sh` 流程，默认构建 `linux/amd64`、`windows/amd64` 和 `darwin/arm64`，并把产物更新到唯一的 `Nightly` 预发布版本中；旧的 Nightly 附件会被删除后重新上传。
+Nightly 使用与手动构建相同的 `Scardice-core/build.sh` 流程，分别在 Ubuntu 和 macOS runner 上构建 `linux/amd64`、`windows/amd64` 和 `darwin/arm64`，最后把产物更新到唯一的 `Nightly` 预发布版本中；旧的 Nightly 附件会被删除后重新上传。
 
 ## 关于 issue 和 pull request
 
