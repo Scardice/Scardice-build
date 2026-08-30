@@ -146,8 +146,14 @@ jobs:
           export DOWNLOAD_RETRIES=3
           export RUNTIME_AXEL_CONNECTIONS=4
 
+          version_main="$(sed -n 's/^[[:space:]]*VERSION_MAIN[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' dice/version.go | head -n1)"
+          if [[ ! "$version_main" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Unable to read VERSION_MAIN from dice/version.go: $version_main" >&2
+            exit 1
+          fi
+
           input_lines=(
-            ""
+            "$version_main"
             "-dev"
             "dev"
             "Scardice"
@@ -161,6 +167,9 @@ jobs:
           fi
 
           printf '%s\n' "${input_lines[@]}" | bash ./build.sh 2>&1 | tee "$GITHUB_WORKSPACE/nightly-ubuntu.log"
+
+          test -f "output/Scardice_${version_main}-dev_linux_amd64.tar.gz"
+          test -f "output/Scardice_${version_main}-dev_windows_amd64.zip"
 
       - name: Upload Linux/Windows packages
         uses: actions/upload-artifact@v4
@@ -242,8 +251,14 @@ jobs:
           export DOWNLOAD_RETRIES=3
           export RUNTIME_AXEL_CONNECTIONS=4
 
+          version_main="$(sed -n 's/^[[:space:]]*VERSION_MAIN[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' dice/version.go | head -n1)"
+          if [[ ! "$version_main" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Unable to read VERSION_MAIN from dice/version.go: $version_main" >&2
+            exit 1
+          fi
+
           input_lines=(
-            ""
+            "$version_main"
             "-dev"
             "dev"
             "Scardice"
@@ -258,6 +273,8 @@ jobs:
           fi
 
           printf '%s\n' "${input_lines[@]}" | bash ./build.sh 2>&1 | tee "$GITHUB_WORKSPACE/nightly-darwin.log"
+
+          test -f "output/Scardice_${version_main}-dev_darwin_arm64.tar.gz"
 
       - name: Upload macOS package
         uses: actions/upload-artifact@v4
