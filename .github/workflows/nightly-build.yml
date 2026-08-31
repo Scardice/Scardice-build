@@ -114,9 +114,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          # QuickJS is a CGO dependency. The same Ubuntu job also cross-builds
-          # windows/amd64, so provide its MinGW compiler as well.
-          sudo apt-get install -y ripgrep zip gcc-mingw-w64-x86-64
+          sudo apt-get install -y ripgrep zip
 
       - name: Prepare optional signing files
         shell: bash
@@ -161,7 +159,7 @@ jobs:
             "Scardice"
             "multi"
             "linux/amd64,windows/amd64"
-            "y"
+            "n"
             "n"
           )
           if command -v upx >/dev/null 2>&1; then
